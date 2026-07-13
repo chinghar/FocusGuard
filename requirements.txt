@@ -1,0 +1,8 @@
+# Phase 0: menu-bar skeleton only
+rumps>=0.4.0
+
+# Added in later phases (uncomment as each phase lands):
+# opencv-python>=4.9.0
+# mediapipe>=0.10.0
+# pyobjc-framework-Quartz>=10.0
+# pyobjc-framework-AppKit>=10.0
