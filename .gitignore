@@ -3,6 +3,10 @@ __pycache__/
 *.pyc
 .DS_Store
 
+# PyInstaller build output
+/build/
+/dist/
+
 # Local runtime data — config/db live in ~/.focusguard, never in-repo,
 # but ignore just in case a dev points the path here for testing.
 *.sqlite3

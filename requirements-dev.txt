@@ -1,0 +1,3 @@
+# Build-only tooling — not needed to just run the app from source.
+-r requirements.txt
+pyinstaller>=6.0
