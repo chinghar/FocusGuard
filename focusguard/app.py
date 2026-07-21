@@ -101,20 +101,16 @@ class FocusGuardApp(rumps.App):
     # -- mode switching -----------------------------------------------
 
     def toggle_mode(self, sender=None) -> None:
-        print(f"FocusGuard: [app] toggle_mode, is_active={self.session_manager.is_active}", file=sys.stderr, flush=True)
         if self.session_manager.is_active:
             self._enter_rest_mode()
         else:
             self._enter_work_mode()
         self._update_indicator(None)
-        print(f"FocusGuard: [app] toggle_mode done, is_active={self.session_manager.is_active}", file=sys.stderr, flush=True)
 
     def _enter_work_mode(self) -> None:
-        print("FocusGuard: [app] _enter_work_mode start", file=sys.stderr, flush=True)
         self.session_manager.start_session()
         self.analytics.start_session()
         self.tracker.start()
-        print(f"FocusGuard: [app] webcam_monitor.enabled={self.webcam_monitor.enabled}, checking camera auth...", file=sys.stderr, flush=True)
         if self.webcam_monitor.enabled and not ensure_camera_authorized():
             # Camera permission not granted — webcam detection sits this
             # session out rather than silently retrying in the background.
@@ -129,7 +125,6 @@ class FocusGuardApp(rumps.App):
             )
         else:
             self.webcam_monitor.start()
-        print("FocusGuard: [app] _enter_work_mode done", file=sys.stderr, flush=True)
 
     def _enter_rest_mode(self) -> None:
         # stop_session() joins the tracker/webcam threads before returning,

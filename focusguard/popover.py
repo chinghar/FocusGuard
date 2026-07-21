@@ -34,8 +34,6 @@ macOS System Settings styling and adapting automatically to Dark Mode.
 
 from __future__ import annotations
 
-import sys
-
 import objc
 from AppKit import (
     NSApp,
@@ -51,17 +49,19 @@ from AppKit import (
     NSMenu,
     NSMenuItem,
     NSMinYEdge,
+    NSNoBorder,
     NSObject,
     NSPopover,
     NSPopoverBehaviorTransient,
     NSRoundedBezelStyle,
+    NSScrollView,
     NSSwitch,
     NSTextField,
     NSTextFieldSquareBezel,
     NSView,
     NSViewController,
 )
-from Foundation import NSMakeRect
+from Foundation import NSMakePoint, NSMakeRect
 
 from focusguard.config import save_config
 
@@ -72,6 +72,12 @@ CONTENT_WIDTH = CONTENT_WIDTH_TOTAL - 2 * MARGIN
 CARD_INNER_WIDTH = CONTENT_WIDTH - 2 * CARD_PADDING
 CARD_GAP = 24
 CORNER_RADIUS = 12.0
+# NSPopover silently clips content taller than the available screen space
+# below the status item — it does NOT scroll or shrink cards on its own.
+# The actual card content stays its full natural height (unchanged from
+# the original design); this just caps how much of it is visible at once
+# through a scroll view, so nothing is ever lost off-screen again.
+MAX_POPOVER_HEIGHT = 700
 
 
 class _Layout:
@@ -221,20 +227,23 @@ class PopoverController(NSObject):
         """Show the popover anchored below the status item button, or
         close it if already showing — called on a left-click."""
         if self.popover.isShown():
-            print("FocusGuard: [popover] closing (was shown)", file=sys.stderr, flush=True)
             self.popover.close()
         else:
-            print("FocusGuard: [popover] showing", file=sys.stderr, flush=True)
             self.refresh()
             self.popover.showRelativeToRect_ofView_preferredEdge_(
                 sender_view.bounds(), sender_view, NSMinYEdge
             )
+            # NSView's default coordinate origin is bottom-left, so an
+            # NSScrollView opens scrolled to the BOTTOM of its document by
+            # default — the opposite of what's wanted here. Explicitly
+            # scroll to the top (highest y = the Mode card, the first
+            # thing you should see) every time the popover opens.
+            self.content_view.scrollPoint_(NSMakePoint(0, self.total_content_height))
 
     # -- status item click routing -------------------------------------
 
     def statusItemClicked_(self, sender) -> None:
         event = NSApp().currentEvent()
-        print(f"FocusGuard: [popover] statusItemClicked_, event type={event.type() if event else None}", file=sys.stderr, flush=True)
         if event is not None and event.type() == NSEventTypeRightMouseUp:
             self._show_quit_menu(sender)
         else:
@@ -371,17 +380,37 @@ class PopoverController(NSObject):
         close_frame = (CONTENT_WIDTH_TOTAL - MARGIN - 100, MARGIN, 100, 32)
         content.addSubview_(_button(close_frame, "Done", self, "closeClicked:", large=True))
 
+        # NSPopover clips content taller than the available screen space
+        # below the status item rather than scrolling or shrinking it —
+        # confirmed directly: the Mode card (at the top of `content`,
+        # i.e. the highest y-values) silently disappeared when total_height
+        # (1170) exceeded what fit on screen. Every card above stays
+        # exactly the size/spacing it was designed with; only the visible
+        # viewport is capped, via a scroll view, so nothing is ever lost.
+        visible_height = min(total_height, MAX_POPOVER_HEIGHT)
+        scroll_view = NSScrollView.alloc().initWithFrame_(
+            NSMakeRect(0, 0, CONTENT_WIDTH_TOTAL, visible_height)
+        )
+        scroll_view.setDocumentView_(content)
+        scroll_view.setHasVerticalScroller_(True)
+        scroll_view.setHasHorizontalScroller_(False)
+        scroll_view.setAutohidesScrollers_(True)
+        scroll_view.setBorderType_(NSNoBorder)
+        scroll_view.setDrawsBackground_(False)
+
         view_controller = NSViewController.alloc().init()
-        view_controller.setView_(content)
+        view_controller.setView_(scroll_view)
 
         popover = NSPopover.alloc().init()
         popover.setContentViewController_(view_controller)
-        popover.setContentSize_((CONTENT_WIDTH_TOTAL, total_height))
+        popover.setContentSize_((CONTENT_WIDTH_TOTAL, visible_height))
         popover.setBehavior_(NSPopoverBehaviorTransient)
         popover.setDelegate_(self)
 
         self.view_controller = view_controller
         self.popover = popover
+        self.content_view = content
+        self.total_content_height = total_height
 
     # -- refresh -----------------------------------------------------------
 
@@ -433,9 +462,7 @@ class PopoverController(NSObject):
     # -- actions -------------------------------------------------------
 
     def modeButtonClicked_(self, sender) -> None:
-        print("FocusGuard: [popover] modeButtonClicked_ fired", file=sys.stderr, flush=True)
         self.app.toggle_mode(None)
-        print("FocusGuard: [popover] toggle_mode returned", file=sys.stderr, flush=True)
 
     def addWebsiteClicked_(self, sender) -> None:
         self.app._add_website(None)
@@ -486,7 +513,6 @@ class PopoverController(NSObject):
         self._commit_webcam_threshold()
 
     def popoverWillClose_(self, notification) -> None:
-        print("FocusGuard: [popover] popoverWillClose_ fired", file=sys.stderr, flush=True)
         # Safety net for a field edited but not confirmed with Enter —
         # commit whatever's currently typed before the popover disappears.
         self._commit_distraction_threshold()
