@@ -186,3 +186,4 @@ FocusGuard.spec          PyInstaller build config
 <!-- doc pass 4 -->
 <!-- doc pass 5 -->
 <!-- doc pass 6 -->
+<!-- doc pass 7 -->
