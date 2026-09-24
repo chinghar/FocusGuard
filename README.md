@@ -180,3 +180,4 @@ focusguard/
 main.py                  Entry point
 FocusGuard.spec          PyInstaller build config
 ```
+<!-- doc pass 1 -->
