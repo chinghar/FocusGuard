@@ -11,3 +11,6 @@ __pycache__/
 # but ignore just in case a dev points the path here for testing.
 *.sqlite3
 /focusguard_data/
+.claude/
+CLAUDE.md
+AGENTS.md
