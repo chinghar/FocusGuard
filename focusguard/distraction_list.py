@@ -54,7 +54,7 @@ class DistractionListManager:
         self._persist()
 
     def remove_app(self, app_name: str) -> None:
-        self._apps.discard(app_name)
+        self._apps.discard(normalize_app(app_name))
         self._persist()
 
     def add_domain(self, domain: str) -> None:
@@ -65,7 +65,7 @@ class DistractionListManager:
         self._persist()
 
     def remove_domain(self, domain: str) -> None:
-        self._domains.discard(domain)
+        self._domains.discard(normalize_domain(domain))
         self._persist()
 
     def _persist(self) -> None:
