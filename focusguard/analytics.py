@@ -103,13 +103,7 @@ def _compute_summary(
 
     merged = _merge_intervals(intervals)
     total_off_task = sum((e - s).total_seconds() for s, e in merged)
-
-    cursor = start
-    longest_streak = 0.0
-    for interval_start, interval_end in merged:
-        longest_streak = max(longest_streak, (interval_start - cursor).total_seconds())
-        cursor = interval_end
-    longest_streak = max(longest_streak, (end - cursor).total_seconds())
+    longest_streak = max(((e - s).total_seconds() for s, e in merged), default=0.0)
 
     return SessionSummary(
         session_id=session_id,
