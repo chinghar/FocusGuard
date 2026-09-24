@@ -9,6 +9,7 @@ about ``Path.home()``, never a literal username.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -109,7 +110,14 @@ def load_config() -> dict[str, Any]:
         return json.loads(json.dumps(DEFAULT_CONFIG))
 
     with CONFIG_PATH.open("r") as f:
-        loaded = json.load(f)
+        try:
+            loaded = json.load(f)
+        except json.JSONDecodeError as exc:
+            # A crash mid-write (save_config isn't atomic) or manual edit
+            # can leave config.json truncated/invalid — fall back to
+            # defaults rather than crashing the app on every launch.
+            print(f"FocusGuard: config.json is invalid ({exc}); using defaults", file=sys.stderr)
+            return json.loads(json.dumps(DEFAULT_CONFIG))
     return _merge_defaults(loaded, DEFAULT_CONFIG)
 
 
