@@ -330,6 +330,7 @@ class FocusGuardApp(rumps.App):
             rumps.alert(title="Nothing to Export", message="No sessions recorded yet.")
             return
         export_path = Path.home() / "Downloads" / f"focusguard_sessions_{datetime.now():%Y%m%d_%H%M%S}.csv"
+        export_path.parent.mkdir(parents=True, exist_ok=True)
         db.export_csv(export_path)
         subprocess.run(["open", "-R", str(export_path)], check=False)
 
